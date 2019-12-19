@@ -39,7 +39,8 @@
 		],
 		"prettier": true,
 		"rules": {
-			"default-param-last": 0
+			"default-param-last": 0,
+			"unicorn/filename-case": 0
 		}
 	},
 	"devDependencies": {
