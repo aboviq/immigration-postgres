@@ -1,49 +1,61 @@
 {
-  "name": "immigration-mysql",
-  "version": "1.0.1",
-  "description": "MySQL adapter for Immigration",
-  "main": "src/index.js",
-  "directories": {
-    "test": "test"
-  },
-  "scripts": {
-    "test": "xo && ava",
-    "release": "standard-version"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/joakimbeng/immigration-mysql.git"
-  },
-  "keywords": [
-    "mysql",
-    "immigration",
-    "migrations",
-    "immigration plugin"
-  ],
-  "author": {
-    "name": "Joakim Carlstein",
-    "email": "joakim@beng.se",
-    "url": "http://joakim.beng.se"
-  },
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/joakimbeng/immigration-mysql/issues"
-  },
-  "homepage": "https://github.com/joakimbeng/immigration-mysql#readme",
-  "xo": {
-    "envs": [
-      "node"
-    ]
-  },
-  "devDependencies": {
-    "ava": "^0.17.0",
-    "standard-version": "^4.0.0",
-    "xo": "^0.17.1"
-  },
-  "dependencies": {
-    "mysql2": "^1.1.2"
-  },
-  "peerDependencies": {
-    "immigration": "^2.2.0"
-  }
+	"name": "immigration-postgres",
+	"version": "0.0.0-development",
+	"description": "Postgres adapter for Immigration",
+	"main": "src/index.js",
+	"directories": {
+		"test": "test"
+	},
+	"scripts": {
+		"test": "xo",
+		"test:integration": "npm run -s immigration",
+		"release": "standard-version",
+		"immigration": "immigration --use [./ --connectionUri \"postgres://postgres@${POSTGRES_HOST:-localhost}/immigration_postgres\" --table migrations] -d migrations up --all",
+		"semantic-release": "semantic-release"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/aboviq/immigration-postgres.git"
+	},
+	"keywords": [
+		"postgres",
+		"immigration",
+		"migrations",
+		"immigration plugin"
+	],
+	"author": {
+		"name": "Aboviq AB",
+		"email": "dev@aboviq.com",
+		"url": "https://www.aboviq.com"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/aboviq/immigration-postgres/issues"
+	},
+	"homepage": "https://github.com/aboviq/immigration-postgres#readme",
+	"xo": {
+		"envs": [
+			"node"
+		],
+		"prettier": true,
+		"rules": {
+			"default-param-last": 0
+		}
+	},
+	"devDependencies": {
+		"@commitlint/cli": "^8.2.0",
+		"@commitlint/config-angular": "^8.2.0",
+		"@commitlint/travis-cli": "^8.2.0",
+		"husky": "^3.1.0",
+		"prettier": "^1.19.1",
+		"immigration": "^2.3.0",
+		"semantic-release": "^15.13.31",
+		"xo": "^0.25.3"
+	},
+	"dependencies": {
+		"slonik": "^21.4.1"
+	},
+	"peerDependencies": {
+		"immigration": "^2.2.0"
+	}
 }

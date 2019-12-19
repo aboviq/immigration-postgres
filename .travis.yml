@@ -1,4 +1,28 @@
 language: node_js
+services:
+  - postgresql
+cache:
+  directories:
+    - ~/.npm
 node_js:
-  - "5"
-  - "4"
+  - 'lts/*'
+branches:
+  except:
+    - /^v\d+\.\d+\.\d+$/
+before_script:
+  - psql -c 'create database immigration_postgres;' -U postgres
+stages:
+  - verify
+  - test
+  - name: deploy
+    if: branch = master
+jobs:
+  include:
+    - stage: verify
+      script: commitlint-travis
+    - stage: test
+      script:
+        - npm test
+        - npm run test:integration
+    - stage: deploy
+      script: npm run semantic-release

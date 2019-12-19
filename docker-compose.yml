@@ -1,0 +1,19 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:12-alpine
+    environment:
+      POSTGRES_PASSWORD: ''
+      POSTGRES_DB: immigration_postgres
+      POSTGRES_USER: postgres
+
+  immigration:
+    image: node:12-alpine
+    volumes:
+      - ./:/app/
+    command: 'sh -c "npm i && npm run immigration"'
+    working_dir: /app/migrations
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_HOST: postgres

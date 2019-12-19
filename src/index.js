@@ -1,75 +1,97 @@
 'use strict';
 const {resolve} = require('path');
-const mysql = require('mysql2/promise');
+const {sql, createPool} = require('slonik');
 
 const LOCK_ID = '***LOCK***';
-const TABLE_DEFINITION = `
-	CREATE TABLE IF NOT EXISTS ?? (
-		name varchar(255) not null primary key,
-		status varchar(32),
-		date datetime not null
-	) Engine=InnoDB;
-`;
 
-exports.init = function (initOptions, dir) {
-	let options = Object.assign({}, initOptions);
-	const {config} = options;
-	delete options.config;
+const mem = fn => {
+	let result;
+	return () => {
+		if (!result) {
+			result = fn();
+		}
 
+		return result;
+	};
+};
+
+exports.init = function({config, ...options} = {}, dir) {
 	if (config) {
 		try {
-			Object.assign(options, require(resolve(dir, config))); // eslint-disable-line import/no-dynamic-require
-		} catch (err) {
-			err.message = `Unable to load configuration file.\n${err.message}`;
-			throw err;
+			Object.assign(options, require(resolve(dir, config)));
+		} catch (error) {
+			error.message = `Unable to load configuration file.\n${error.message}`;
+			throw error;
 		}
 	}
 
-	const {table} = options;
-	delete options.table;
+	const {table, connectionUri, clientConfiguration} = options;
 	if (typeof table !== 'string') {
-		throw new TypeError(`Expected "table" to exist in configuration options`);
+		throw new TypeError('Expected "table" to exist in configuration options');
 	}
 
-	const connectionPromise = mysql.createConnection(options);
+	if (typeof connectionUri !== 'string') {
+		throw new TypeError('Expected "connectionUri" to exist in configuration options');
+	}
 
-	let prepare = () => connectionPromise
-		.then(connection => connection.query(TABLE_DEFINITION, [table])
-			.then(() => {
-				prepare = () => Promise.resolve();
-			})
-		);
+	console.log(connectionUri);
 
-	const getConnection = () => prepare().then(() => connectionPromise);
+	const pool = createPool(connectionUri, clientConfiguration);
+
+	const prepare = mem(async () => {
+		const exists = await pool.oneFirst(sql`
+			SELECT EXISTS (
+				SELECT 1 as exists
+				FROM
+					information_schema.tables
+				WHERE
+					table_schema = 'public'
+					AND table_name = ${table}
+			)`);
+		if (exists) {
+			return;
+		}
+
+		await pool.query(sql`
+			CREATE TABLE ${sql.identifier([table])} (
+				name varchar(255) not null primary key,
+				status varchar(32),
+				date timestamptz not null
+			)
+		`);
+	});
 
 	const log = (name, status, date) => {
-		return getConnection()
-			.then(connection => connection.query(`
-				INSERT INTO ?? (name, status, date)
-				VALUES (?, ?, ?)
-				ON DUPLICATE KEY
-				UPDATE
-					status = VALUES(status),
-					date = VALUES(date);
-			`, [table, name, status, date]));
+		return prepare().then(() =>
+			pool.query(sql`
+				INSERT INTO ${sql.identifier([table])} (name, status, date)
+				VALUES (${name}, ${status}, to_timestamp(${date instanceof Date ? date.getTime() : date}))
+				ON CONFLICT (name) DO UPDATE
+				SET
+					status = excluded.status,
+					date = excluded.date;
+			`)
+		);
 	};
 
 	const unlog = name => {
-		return getConnection()
-			.then(connection => connection.query('DELETE FROM ?? WHERE name = ?;', [table, name]));
+		return prepare().then(() =>
+			pool.query(sql`DELETE FROM ${sql.identifier([table])} WHERE name = ${name};`)
+		);
 	};
 
 	const lock = () => {
-		return getConnection()
-			.then(connection => connection.query(`
-				INSERT INTO ?? (name, date)
-				VALUES (?, ?)
-			`, [table, LOCK_ID, new Date()]))
-			.catch(err => {
-				if (/^Duplicate entry /.test(err.message)) {
-					err.message = `Failed to acquire migration lock\nCaused by: ${err.message}`;
-				}
-				throw err;
+		return prepare()
+			.then(() =>
+				pool.query(sql`
+				INSERT INTO ${sql.identifier([table])} (name, date)
+				VALUES (${LOCK_ID}, to_timestamp(${Date.now()}))
+			`)
+			)
+			.catch(error => {
+				error.message = `Failed to acquire migration lock\nCaused by: ${error.message}`;
+
+				throw error;
 			});
 	};
 
@@ -78,15 +100,15 @@ exports.init = function (initOptions, dir) {
 	};
 
 	const isLocked = () => {
-		return getConnection()
-			.then(connection => connection.query('SELECT 1 AS exist FROM ?? WHERE name = ?;', [table, LOCK_ID]))
-			.then(([rows]) => Boolean(rows[0].exist));
+		return prepare().then(() =>
+			pool.oneFirst(sql`SELECT 1 AS exist FROM ${sql.identifier([table])} WHERE name = ${LOCK_ID};`)
+		);
 	};
 
 	const executed = () => {
-		return getConnection()
-			.then(connection => connection.query('SELECT * FROM ?? WHERE name <> ?;', [table, LOCK_ID]))
-			.then(([rows]) => rows);
+		return prepare().then(() =>
+			pool.any(sql`SELECT * FROM ${sql.identifier([table])} WHERE name <> ${LOCK_ID};`)
+		);
 	};
 
 	return {log, unlog, lock, unlock, isLocked, executed};
