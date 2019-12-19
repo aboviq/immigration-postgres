@@ -10,7 +10,7 @@
 		"test": "xo",
 		"test:integration": "npm run -s immigration",
 		"release": "standard-version",
-		"immigration": "immigration --use [./ --connectionUri \"postgres://postgres@${POSTGRES_HOST:-localhost}/immigration_postgres\" --table migrations] -d migrations up --all",
+		"immigration": "immigration --use [./ --connectionUri \"postgres://postgres@${POSTGRES_HOST:-localhost}/immigration_postgres\" --table migrations] -d migrations up --new",
 		"semantic-release": "semantic-release"
 	},
 	"repository": {
@@ -40,7 +40,8 @@
 		"prettier": true,
 		"rules": {
 			"default-param-last": 0,
-			"unicorn/filename-case": 0
+			"unicorn/filename-case": 0,
+			"padding-line-between-statements": 0
 		}
 	},
 	"devDependencies": {

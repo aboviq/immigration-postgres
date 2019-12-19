@@ -106,9 +106,16 @@ exports.init = function({config, ...options} = {}, dir) {
 	};
 
 	const executed = () => {
-		return prepare().then(() =>
-			pool.any(sql`SELECT * FROM ${sql.identifier([table])} WHERE name <> ${LOCK_ID};`)
-		);
+		return prepare()
+			.then(() => pool.any(sql`SELECT * FROM ${sql.identifier([table])} WHERE name <> ${LOCK_ID};`))
+			.then(rows =>
+				rows.map(row => {
+					if (typeof row.date === 'number') {
+						row.date = new Date(row.date);
+					}
+					return row;
+				})
+			);
 	};
 
 	return {log, unlog, lock, unlock, isLocked, executed};
