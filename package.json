@@ -12,7 +12,7 @@
 		"test:docker": "docker-compose up --exit-code-from immigration",
 		"posttest:docker": "docker-compose down",
 		"release": "standard-version",
-		"immigration": "immigration --use [./ --table migrations --user postgres --database immigration_postgres] -d migrations up --new",
+		"immigration": "immigration --use [./ --table migrations] -d migrations up --new",
 		"semantic-release": "semantic-release"
 	},
 	"repository": {

@@ -4,7 +4,7 @@ services:
     image: postgres:12-alpine
     environment:
       POSTGRES_PASSWORD: ''
-      POSTGRES_DB: immigration_postgres
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
 
   immigration:
@@ -19,4 +19,4 @@ services:
       PGHOST: postgres
       PGUSER: postgres
       PGPASSWORD: ''
-      PGDATABASE: immigration_postgres
+      PGDATABASE: postgres
