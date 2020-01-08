@@ -21,9 +21,6 @@ jobs:
     - stage: verify
       script: commitlint-travis
     - stage: test
-      env:
-        - PGUSER=postgres
-        - PGDATABASE=immigration_postgres
       script:
         - npm test
         - npm run test:integration
