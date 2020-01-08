@@ -1,13 +1,15 @@
 'use strict';
-const {sql, createPool} = require('slonik');
+const {Pool} = require('pg');
 
-const pool = createPool(
-	`postgres://postgres@${process.env.POSTGRES_HOST || 'localhost'}/immigration_postgres`
-);
+const pool = new Pool();
 
-exports.up = () =>
-	pool.one(sql`
-	SELECT * FROM immigration_postgres;
-`);
+exports.up = async () => {
+	const {rows} = await pool.query(`
+		SELECT * FROM immigration_postgres;
+	`);
+	if (rows[0].value !== 'second') {
+		throw new Error('Wrong db content!');
+	}
+};
 
 exports.down = () => {};

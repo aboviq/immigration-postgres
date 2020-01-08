@@ -1,13 +1,11 @@
 'use strict';
-const {sql, createPool} = require('slonik');
+const {Pool} = require('pg');
 
-const pool = createPool(
-	`postgres://postgres@${process.env.POSTGRES_HOST || 'localhost'}/immigration_postgres`
-);
+const pool = new Pool();
 
 exports.up = () =>
-	pool.query(sql`
-	INSERT INTO immigration_postgres (value) VALUES ('second');
-`);
+	pool.query(`
+		INSERT INTO immigration_postgres (value) VALUES ('second');
+	`);
 
 exports.down = () => {};

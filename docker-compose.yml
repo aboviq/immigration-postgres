@@ -16,4 +16,7 @@ services:
     depends_on:
       - postgres
     environment:
-      POSTGRES_HOST: postgres
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: ''
+      PGDATABASE: immigration_postgres

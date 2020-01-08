@@ -1,6 +1,6 @@
 'use strict';
 const {resolve} = require('path');
-const {sql, createPool} = require('slonik');
+const {Pool} = require('pg');
 
 const LOCK_ID = '***LOCK***';
 
@@ -25,35 +25,38 @@ exports.init = function({config, ...options} = {}, dir) {
 		}
 	}
 
-	const {table, connectionUri, clientConfiguration} = options;
+	const {table, ...connectionOpts} = options;
 	if (typeof table !== 'string') {
 		throw new TypeError('Expected "table" to exist in configuration options');
 	}
 
-	if (typeof connectionUri !== 'string') {
-		throw new TypeError('Expected "connectionUri" to exist in configuration options');
+	if (/[^a-z_0-9]/.test(table)) {
+		throw new TypeError(
+			'Only alphanumeric characters and underscores are allowed in the table name'
+		);
 	}
 
-	console.log(connectionUri);
-
-	const pool = createPool(connectionUri, clientConfiguration);
+	const pool = new Pool(connectionOpts);
 
 	const prepare = mem(async () => {
-		const exists = await pool.oneFirst(sql`
-			SELECT EXISTS (
+		const {rows} = await pool.query({
+			text: `
 				SELECT 1 as exists
 				FROM
 					information_schema.tables
 				WHERE
 					table_schema = 'public'
-					AND table_name = ${table}
-			)`);
-		if (exists) {
+					AND table_name = $1
+			`,
+			values: [table]
+		});
+
+		if (rows[0] && rows[0].exists) {
 			return;
 		}
 
-		await pool.query(sql`
-			CREATE TABLE ${sql.identifier([table])} (
+		await pool.query(`
+			CREATE TABLE ${table} (
 				name varchar(255) not null primary key,
 				status varchar(32),
 				date timestamptz not null
@@ -63,30 +66,36 @@ exports.init = function({config, ...options} = {}, dir) {
 
 	const log = (name, status, date) => {
 		return prepare().then(() =>
-			pool.query(sql`
-				INSERT INTO ${sql.identifier([table])} (name, status, date)
-				VALUES (${name}, ${status}, to_timestamp(${date instanceof Date ? date.getTime() : date}))
-				ON CONFLICT (name) DO UPDATE
-				SET
-					status = excluded.status,
-					date = excluded.date;
-			`)
+			pool.query({
+				text: `
+					INSERT INTO ${table} (name, status, date)
+					VALUES ($1, $2, $3)
+					ON CONFLICT (name) DO UPDATE
+					SET
+						status = excluded.status,
+						date = excluded.date;
+				`,
+				values: [name, status, date],
+				name: 'log'
+			})
 		);
 	};
 
 	const unlog = name => {
-		return prepare().then(() =>
-			pool.query(sql`DELETE FROM ${sql.identifier([table])} WHERE name = ${name};`)
-		);
+		return prepare().then(() => pool.query(`DELETE FROM ${table} WHERE name = $1;`, [name]));
 	};
 
 	const lock = () => {
 		return prepare()
 			.then(() =>
-				pool.query(sql`
-				INSERT INTO ${sql.identifier([table])} (name, date)
-				VALUES (${LOCK_ID}, to_timestamp(${Date.now()}))
-			`)
+				pool.query({
+					text: `
+						INSERT INTO ${table} (name, date)
+						VALUES ($1, $2)
+					`,
+					values: [LOCK_ID, new Date()],
+					name: 'lock'
+				})
 			)
 			.catch(error => {
 				error.message = `Failed to acquire migration lock\nCaused by: ${error.message}`;
@@ -100,22 +109,15 @@ exports.init = function({config, ...options} = {}, dir) {
 	};
 
 	const isLocked = () => {
-		return prepare().then(() =>
-			pool.oneFirst(sql`SELECT 1 AS exist FROM ${sql.identifier([table])} WHERE name = ${LOCK_ID};`)
-		);
+		return prepare()
+			.then(() => pool.query(`SELECT 1 AS exist FROM ${table} WHERE name = $1;`, [LOCK_ID]))
+			.then(({rows}) => rows[0] && rows[0].exist);
 	};
 
 	const executed = () => {
 		return prepare()
-			.then(() => pool.any(sql`SELECT * FROM ${sql.identifier([table])} WHERE name <> ${LOCK_ID};`))
-			.then(rows =>
-				rows.map(row => {
-					if (typeof row.date === 'number') {
-						row.date = new Date(row.date);
-					}
-					return row;
-				})
-			);
+			.then(() => pool.query(`SELECT * FROM ${table} WHERE name <> $1;`, [LOCK_ID]))
+			.then(({rows}) => rows);
 	};
 
 	return {log, unlog, lock, unlock, isLocked, executed};

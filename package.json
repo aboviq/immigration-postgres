@@ -9,8 +9,10 @@
 	"scripts": {
 		"test": "xo",
 		"test:integration": "npm run -s immigration",
+		"test:docker": "docker-compose up --exit-code-from immigration",
+		"posttest:docker": "docker-compose down",
 		"release": "standard-version",
-		"immigration": "immigration --use [./ --connectionUri \"postgres://postgres@${POSTGRES_HOST:-localhost}/immigration_postgres\" --table migrations] -d migrations up --new",
+		"immigration": "immigration --use [./ --table migrations] -d migrations up --new",
 		"semantic-release": "semantic-release"
 	},
 	"repository": {
@@ -55,7 +57,7 @@
 		"xo": "^0.25.3"
 	},
 	"dependencies": {
-		"slonik": "^21.4.1"
+		"pg": "^7.17.0"
 	},
 	"peerDependencies": {
 		"immigration": "^2.2.0"

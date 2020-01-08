@@ -22,12 +22,11 @@ immigration --use [ immigration-postgres --table migrations --config ./src/a-pos
 
 ## Options
 
-| Name                | Type                      | Description                                                                                               | Required |
-| ------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------- | -------- |
-| table               | `String`                  | The table name for migrations to be persisted (created automatically)                                     | yes      |
-| config              | `String`                  | A path to a module or json exporting/containing options (I.e. `require(options.config)`)                  | no       |
-| connectionUri       | `String`                  | A PostgreSQL Connection URI for [Slonik's `createPool`](https://github.com/gajus/slonik#slonik-usage-api) | no       |
-| clientConfiguration | `ClientConfigurationType` | The client configuration for [Slonik's `createPool`](https://github.com/gajus/slonik#slonik-usage-api)    | no       |
+| Name     | Type     | Description                                                                                  | Required |
+| -------- | -------- | -------------------------------------------------------------------------------------------- | -------- |
+| table    | `String` | The table name for migrations to be persisted (created automatically)                        | yes      |
+| config   | `String` | A path to a module or json exporting/containing options (I.e. `require(options.config)`)     | no       |
+| ...other | `Any`    | All other options are passed to [PG's `Pool`](https://node-postgres.com/features/connecting) | no       |
 
 ## License
 

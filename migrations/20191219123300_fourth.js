@@ -1,13 +1,16 @@
 'use strict';
-const {sql, createPool} = require('slonik');
+const {Pool} = require('pg');
 
-const pool = createPool(
-	`postgres://postgres@${process.env.POSTGRES_HOST || 'localhost'}/immigration_postgres`
-);
+const pool = new Pool();
 
-exports.up = () =>
-	pool.query(sql`
-	DROP TABLE immigration_postgres;
-`);
+exports.up = async () => {
+	await pool.query(`
+		DROP TABLE immigration_postgres;
+	`);
+	const {rows} = await pool.query(`SELECT * FROM migrations`);
+	console.log(
+		rows.map(row => `${row.name} - ${row.status} - ${row.date.toISOString()}`).join('\n')
+	);
+};
 
 exports.down = () => {};
